@@ -1102,6 +1102,14 @@ fn now_ms() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
+/// How far a page's `innerWidth` may differ from the requested window width.
+/// Headless Chromium on Windows counts the window frame in `--window-size`, so
+/// a 1280 window reports an `innerWidth` of 1250.
+#[cfg(windows)]
+const WIDTH_SLACK: u32 = 40;
+#[cfg(not(windows))]
+const WIDTH_SLACK: u32 = 0;
+
 /// A browser the daemon can drive headless: JELLY_CHROME, or the usual installs.
 fn chrome() -> Option<String> {
     let candidates = [
@@ -1195,7 +1203,7 @@ where
     let width = q.width.unwrap_or(1280);
     let height = q.height.unwrap_or(if width <= 500 { 844 } else { 900 });
     let fresh = |app: &App| -> Result<Option<Screen>, ApiError> {
-        Ok(app.screen(&name, &owner)?.filter(|s| s.version == j.version && s.width == width))
+        Ok(app.screen(&name, &owner)?.filter(|s| s.version == j.version && s.width.abs_diff(width) <= WIDTH_SLACK))
     };
     let mut notes: Vec<String> = Vec::new();
     let mut snap = fresh(&app)?;
