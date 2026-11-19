@@ -840,7 +840,7 @@ impl Store {
     }
 
     pub fn asset_dir(&self, name: &str) -> PathBuf {
-        self.dir.join("assets").join(name)
+        self.dir.join("assets").join(fs_name(name))
     }
 
     /// Saves a file next to a jelly, outside its state and undo history.
@@ -1274,7 +1274,7 @@ impl Store {
     }
 
     fn path(&self, name: &str) -> PathBuf {
-        self.dir.join("jellies").join(format!("{name}.json"))
+        self.dir.join("jellies").join(format!("{}.json", fs_name(name)))
     }
 }
 
@@ -1462,6 +1462,13 @@ fn valid_name(name: &str) -> Result<(), Error> {
         None => part(name),
     };
     if ok { Ok(()) } else { Err(Error::Invalid(format!("bad name {name:?}: use 1-64 of a-z, 0-9, - and _, optionally as project:name"))) }
+}
+
+/// A jelly name as a file or folder name. Windows forbids ':' in one, so `project:name`
+/// is stored as `project+name` there ('+' can never appear in a valid name). Elsewhere
+/// the name is used as is, which keeps existing homes working.
+fn fs_name(name: &str) -> String {
+    if cfg!(windows) { name.replace(':', "+") } else { name.to_string() }
 }
 
 fn valid_file(file: &str) -> Result<(), Error> {
