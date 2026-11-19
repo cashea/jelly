@@ -840,7 +840,7 @@ impl Store {
     }
 
     pub fn asset_dir(&self, name: &str) -> PathBuf {
-        self.dir.join("assets").join(name)
+        self.dir.join("assets").join(fs_id(name))
     }
 
     /// Saves a file next to a jelly, outside its state and undo history.
@@ -1274,8 +1274,20 @@ impl Store {
     }
 
     fn path(&self, name: &str) -> PathBuf {
-        self.dir.join("jellies").join(format!("{name}.json"))
+        self.dir.join("jellies").join(format!("{}.json", fs_id(name)))
     }
+}
+
+/// A jelly id as a file name. `:` is not allowed in Windows file names (it
+/// opens an NTFS stream), and `+` cannot occur in a valid name, so it stands in.
+#[cfg(windows)]
+fn fs_id(name: &str) -> String {
+    name.replace(':', "+")
+}
+
+#[cfg(not(windows))]
+fn fs_id(name: &str) -> String {
+    name.to_string()
 }
 
 /// Keeps `step` for undo, then drops the oldest steps past the depth or the byte budget.
